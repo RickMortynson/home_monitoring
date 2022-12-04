@@ -1,0 +1,6 @@
+.aws-sam
+samlconfig.toml
+
+configuration/
+**.env
+!.dist.env

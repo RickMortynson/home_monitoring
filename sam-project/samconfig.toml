@@ -1,0 +1,10 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "home-services-analyst"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-qd1iij1rz2tn"
+s3_prefix = "home-services-analyst"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+image_repositories = ["ElectricityCheckerFunction=594405658551.dkr.ecr.us-east-1.amazonaws.com/homeservicesanalyste5532388/electricitycheckerfunction6f9db60frepo"]
