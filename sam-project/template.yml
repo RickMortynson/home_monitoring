@@ -20,10 +20,6 @@ Resources:
       PackageType: Image
       Architectures:
         - x86_64
-      Environment:
-        Variables:
-          GO_ENV: "production"
-      ImageUri:
         
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

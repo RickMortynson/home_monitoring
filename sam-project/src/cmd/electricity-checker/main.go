@@ -25,8 +25,6 @@ func Handler() {
 		panic(err)
 	}
 
-	fmt.Println("configs:", tgConfig, heartbeatConfig, repoConfig)
-
 	repo := repository.NewRepository(&repoConfig)
 	telegram := telegram.NewTelegramService(&tgConfig)
 
