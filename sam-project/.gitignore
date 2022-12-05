@@ -1,5 +1,5 @@
 .aws-sam
-samlconfig.toml
+samconfig.toml
 
 configuration/
 **.env

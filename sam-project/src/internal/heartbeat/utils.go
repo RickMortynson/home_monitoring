@@ -102,7 +102,7 @@ func ukrainianFormat(time float64, form ukrainianFormatForms) string {
 		return form.first
 	case strings.ContainsAny(string(lastNumber), "234") && (time < 5 || time >= 22):
 		return form.second
-	case strings.ContainsAny(string(lastNumber), "56789") && (time >= 10 && time <= 20) || lastNumber == '0':
+	case strings.ContainsAny(string(lastNumber), "56789") || (time >= 10 && time <= 20) || lastNumber == '0':
 		return form.third
 	default:
 		return form.third
