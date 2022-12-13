@@ -13,21 +13,37 @@ Resources:
   ElectricityCheckerFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Metadata:
-      Dockerfile: Dockerfile
+      Dockerfile: ./deploy/electricity_checker.Dockerfile
       DockerContext: ./src
       DockerTag: 1
     Properties:
       PackageType: Image
       Architectures:
         - x86_64
-        
+  ShutdownScheduleUpdaterFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Metadata:
+      Dockerfile: ./deploy/shutdown_schedule.Dockerfile
+      DockerContext: ./src
+      DockerTag: 1
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
   ElectricityCheckerFunction:
-    Description: "First Lambda Function ARN"
+    Description: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     Value: !GetAtt ElectricityCheckerFunction.Arn
+  ShutdownScheduleUpdaterFunction:
+    Description: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    Value: !GetAtt ShutdownScheduleUpdaterFunction.Arn
   ElectricityCheckerFunctionIamRole:
-    Description: "Implicit IAM Role created for Electricity Checker Function"
+    Description: "Check description of ElectricityCheckerFunction"
     Value: !GetAtt ElectricityCheckerFunctionRole.Arn
+  ShutdownScheduleUpdaterFunctionIamRole:
+    Description: "Check description of ShutdownScheduleUpdaterFunction"
+    Value: !GetAtt ShutdownScheduleUpdaterFunctionRole.Arn

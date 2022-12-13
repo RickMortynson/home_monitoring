@@ -6,7 +6,14 @@ import (
 	"fmt"
 	"home_services_analyst/internal/config"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"strconv"
+	"strings"
+)
+
+const (
+	CONTENT_TYPE_JSON = "application/json"
 )
 
 type Telegram struct {
@@ -25,7 +32,19 @@ type MessagePayload struct {
 	ChatId              int    `json:"chat_id"`
 	Text                string `json:"text"`
 	DisableNotification bool   `json:"disable_notification"`
-	MessageId           int    `json:"message_id"`
+}
+
+type UpdateMessagePayload struct {
+	MessagePayload
+
+	MessageId int `json:"message_id"`
+}
+
+type ImageMessagePayload struct {
+	MessagePayload
+
+	Photo   string `json:"photo"`
+	Caption string `json:"caption"`
 }
 
 type TgResponse struct {
@@ -34,7 +53,7 @@ type TgResponse struct {
 	} `json:"result"`
 }
 
-func (t *Telegram) SendMessage(message string) (TgResponse, error) {
+func (t *Telegram) SendTextMessage(message string) (TgResponse, error) {
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", t.botToken)
 
 	payload := MessagePayload{
@@ -65,13 +84,55 @@ func (t *Telegram) SendMessage(message string) (TgResponse, error) {
 	return tgResponse, nil
 }
 
+func (t *Telegram) SendImageMessage(image []byte, caption string) error {
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendPhoto", t.botToken)
+
+	var payloadBody bytes.Buffer
+	mp := multipart.NewWriter(&payloadBody)
+
+	values := map[string]io.Reader{
+		"photo":   bytes.NewReader(image),
+		"caption": strings.NewReader(caption),
+		"chat_id": strings.NewReader(strconv.Itoa(t.chatId)),
+	}
+
+	for key, r := range values {
+		if _, ok := r.(*bytes.Reader); ok {
+			part, err := mp.CreateFormFile(key, "image.png")
+			if err != nil {
+				return err
+			}
+			io.Copy(part, r)
+		} else {
+			ff, err := mp.CreateFormField(key)
+			if err != nil {
+				return err
+			}
+
+			io.Copy(ff, r)
+		}
+	}
+
+	if err := mp.Close(); err != nil {
+		return err
+	}
+
+	if _, err := http.Post(url, mp.FormDataContentType(), &payloadBody); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (t *Telegram) UpdateTextMessage(messageId int, message string) error {
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/editMessageText", t.botToken)
 
-	payload := MessagePayload{
+	payload := UpdateMessagePayload{
 		MessageId: messageId,
-		ChatId:    t.chatId,
-		Text:      message,
+		MessagePayload: MessagePayload{
+			ChatId: t.chatId,
+			Text:   message,
+		},
 	}
 
 	marshalled, err := json.Marshal(payload)

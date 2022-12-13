@@ -6,6 +6,7 @@ import (
 	"home_services_analyst/internal/config"
 	"home_services_analyst/internal/repository"
 	"home_services_analyst/internal/telegram"
+	"home_services_analyst/internal/utils"
 
 	"io"
 	"net/http"
@@ -15,6 +16,9 @@ import (
 const (
 	GOOD_MESSAGE = "З'явилось світло 🎉"
 	BAD_MESSAGE  = "Нема світла 🫠"
+
+	STATUS_ONLINE  = true
+	STATUS_OFFLINE = false
 )
 
 type HeartBeatResponse struct {
@@ -35,11 +39,13 @@ type Heartbeat struct {
 	repo     *repository.Repository
 	telegram *telegram.Telegram
 
-	metadata         repository.Metadata
 	shouldUpdateRepo bool
 }
 
-func NewHeartbeatService(cfg *config.HeartbeatConfig, repo *repository.Repository, tg *telegram.Telegram) Heartbeat {
+func NewHeartbeatService(
+	cfg *config.HeartbeatConfig,
+	repo *repository.Repository,
+	tg *telegram.Telegram) Heartbeat {
 	return Heartbeat{
 		config:   cfg,
 		repo:     repo,
@@ -48,11 +54,12 @@ func NewHeartbeatService(cfg *config.HeartbeatConfig, repo *repository.Repositor
 }
 
 func (h *Heartbeat) HandleHeartbeats() error {
-	if err := h.repo.LoadMetadata(&h.metadata); err != nil {
+	metadata, err := h.repo.LoadMetadata()
+	if err != nil {
 		return err
 	}
 
-	prettyPrint(h.metadata)
+	utils.PrettyPrint(metadata)
 
 	lastGoodHeartbeat, err := h.getLastGoodHeartbeatTimestamp()
 	if err != nil {
@@ -65,39 +72,40 @@ func (h *Heartbeat) HandleHeartbeats() error {
 
 	fmt.Println("h.config.CheckTimeoutSec", time.Duration(h.config.CheckTimeoutSec))
 	fmt.Println("lastHeartbeatInOkTime", lastHeartbeatInOkTime)
-	fmt.Println("h.metadata.Online", h.metadata.Online)
+	fmt.Println("h.metadata.Online", metadata.Online)
 
 	if lastHeartbeatInOkTime {
-		if !h.metadata.Online {
-			h.updateMetaOnlineStatus(true)
+		if !metadata.Online {
+			h.updateMetaOnlineStatus(&metadata, STATUS_ONLINE)
 
 			fmt.Println("🚨🚨🚨 SEND GOOD MESSAGE 🚨🚨🚨")
 
-			_, err = h.telegram.SendMessage(GOOD_MESSAGE)
-			if err != nil {
+			if _, err = h.telegram.SendTextMessage(GOOD_MESSAGE); err != nil {
 				return err
 			}
 		}
 	} else {
-		if h.metadata.Online {
-			h.updateMetaOnlineStatus(false)
+		if metadata.Online {
+			h.updateMetaOnlineStatus(&metadata, STATUS_OFFLINE)
 
 			fmt.Println("🚨🚨🚨 SEND BAD MESSAGE 🚨🚨🚨")
 
-			resp, err := h.telegram.SendMessage(BAD_MESSAGE)
+			resp, err := h.telegram.SendTextMessage(BAD_MESSAGE)
 			if err != nil {
 				return err
 			}
 
-			h.updateLastMessageId(resp.Result.MessageId)
+			h.updateLastMessageId(&metadata, resp.Result.MessageId)
 		} else {
 			newMessage := fmt.Sprintf("%s\n\n%s", BAD_MESSAGE, fmt.Sprintf("%s%s", "Світла не було ", secondsToReadableUkrainian(int(time.Since(lastGoodHeartbeat).Seconds()))))
-			h.telegram.UpdateTextMessage(h.metadata.LastMessageId, newMessage)
+			h.telegram.UpdateTextMessage(metadata.LastBadMessageId, newMessage)
 		}
 	}
 
 	if h.shouldUpdateRepo {
-		if err := h.repo.UpdateMetadata(&h.metadata); err != nil {
+		// Use PostMetadata instead of actual metadata because of requirement from supabase - parameters
+		// in post request should start with '_'
+		if err := h.repo.UpdateMetadata(repository.PostMetadata(metadata)); err != nil {
 			return err
 		}
 	}
@@ -105,14 +113,14 @@ func (h *Heartbeat) HandleHeartbeats() error {
 	return nil
 }
 
-func (h *Heartbeat) updateMetaOnlineStatus(status bool) {
+func (h *Heartbeat) updateMetaOnlineStatus(meta *repository.Metadata, status bool) {
 	h.shouldUpdateRepo = true
-	h.metadata.Online = status
+	meta.Online = status
 }
 
-func (h *Heartbeat) updateLastMessageId(id int) {
+func (h *Heartbeat) updateLastMessageId(meta *repository.Metadata, id int) {
 	h.shouldUpdateRepo = true
-	h.metadata.LastMessageId = id
+	meta.LastBadMessageId = id
 }
 
 func (h *Heartbeat) getLastGoodHeartbeatTimestamp() (time.Time, error) {

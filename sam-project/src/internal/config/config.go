@@ -19,18 +19,21 @@ type TelegramConfig struct {
 
 type RepoConfig struct {
 	SupabaseUrl    string `env:"SUPABASE_URL"`
-	SupabaseBucket string `env:"SUPABASE_BUCKET"`
 	SupabaseToken  string `env:"SUPABASE_SERVICE_TOKEN"`
-	MetadataFile   string `env:"METADATA_FILENAME"`
 }
 
 func LoadConfig(configs ...any) error {
 	var envFile string
+	// doesn't work actually, lol
+	// TODO: find out & fuck around with SAM's in-container env variables
 	if os.Getenv("GO_ENV") == "production" {
 		envFile = "secrets/.prod.env"
 	} else {
 		envFile = "secrets/.dev.env"
 	}
+
+	// TODO: get rid of this 🤦
+	envFile = "secrets/.prod.env"
 
 	for _, cfg := range configs {
 		if err := cleanenv.ReadConfig(envFile, cfg); err != nil {

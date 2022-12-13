@@ -1,17 +1,10 @@
 package heartbeat
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
 )
-
-func prettyPrint(object any) {
-	b, _ := json.MarshalIndent(object, "", "    ")
-
-	fmt.Println(string(b))
-}
 
 func secondsToReadableUkrainian(input int) string {
 	weeks := math.Floor(float64(input) / 60 / 60 / 24 / 7)
